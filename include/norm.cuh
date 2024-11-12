@@ -9,11 +9,13 @@
 #include "image.hpp"
 #include "templates.hpp"
 
-struct SearchNorm {
+struct SearchNorm 
+{
   Parameters para;
   EulerData euler;
 
-  struct Size {
+  struct Size 
+  {
     size_t width;
     size_t height;
   };
@@ -47,8 +49,7 @@ struct SearchNorm {
   void ComputeCCGSum();
   void ComputeCCGMean();
   void PickParticles(std::vector<float>& scores, float euler3);
-  void OutputScore(std::ostream& output, std::vector<float>& scores, float euler3,
-                   const Image& input);
+  void OutputScore(std::ostream& output, std::vector<float>& scores, float euler3, const Image& input);
 
   void work(const Templates& temp, const Image& image, std::ostream& output);
   void work_verbose(const Templates& temp, const Image& image, std::ostream& output);

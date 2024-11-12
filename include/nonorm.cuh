@@ -31,19 +31,18 @@ struct SearchNoNorm {
   float phi_step;
   bool invert, phase_flip;
 
-  void LoadTemplate(const Templates& temp);
-  void LoadImage(const TileImages::Tile& tile);
-  void SetParams(const TileImages::Params& params);
+  void LoadTemplate(const Templates & temp);
+  void LoadImage(const TileImages::Tile & tile);
+  void SetParams(const TileImages::Params & params);
   void PreprocessImage();
   void SplitImage();
   void PreprocessTemplate();
   void PickParticles(std::vector<float>& scores, float euler3);
-  void OutputScore(std::ostream& output, float euler3, std::vector<float>& scores,
-                   const TileImages& tiles, const TileImages::Tile& tile);
+  void OutputScore(std::ostream& output, float euler3, std::vector<float>& scores, const TileImages & tiles, const TileImages::Tile& tile);
 
-  void work(const Templates& temp, const TileImages& tiles, std::ostream& output);
-  void work_verbose(const Templates& temp, const TileImages& tiles, std::ostream& output);
+  void work(const Templates & temp, const TileImages & tiles, std::ostream & output);
+  void work_verbose(const Templates & temp, const TileImages & tiles, std::ostream & output);
 
-  SearchNoNorm(const Config& c, const EulerData& e, Size img, int device = 0);
+  SearchNoNorm(const Config & c, const EulerData & e, Size img, int device = 0);
   ~SearchNoNorm();
 };
