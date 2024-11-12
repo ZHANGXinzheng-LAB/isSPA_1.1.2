@@ -1,107 +1,123 @@
 #include <cassert>
+#include <cstdio>
 
 #include "DataReader2.h"
 
 // Parse config file
-Config::Config(const std::string& path) {
-  std::ifstream conf(path);
-  if (!conf) {
-    printf("Open config file failed: %s\n\n", path.c_str());
-    return;
-  }
-  std::string key, e, val;
-  while (conf >> key >> e >> val) {
-    assert(e == "=");
+Config::Config(const std::string & path) 
+{
+    std::ifstream conf(path);
+    if (!conf) 
+    {
+        std::printf("Configuration file does NOT exist: %s\n\n", path.c_str());
+        return;
+    }
+    std::string key, e, val;
+    // 逐行分空格读取字符串
+    while (conf >> key >> e >> val) 
+    {
+        assert(e == "=");
+        if (this->value.find(key) == this->value.end())
+            continue;
 
-    if (this->value.find(key) == this->value.end())
-      continue;
-
-    std::visit(overloaded{
+        std::visit(overloaded{
                    [&](auto& arg) { arg = val; },
                    [&](int& arg) { arg = std::stoi(val); },
                    [&](float& arg) { arg = std::stof(val); },
                    [&](std::string& arg) { arg = val; },
-               },
-               this->value[key]);
-  }
-  checkRequestPara();
-}
-
-void Config::checkRequestPara() {
-  if (std::get<std::string>(value["input"]).empty())
-    printf("Error : lst/star file is requested.\n");
-  if (std::get<std::string>(value["template"]).empty())
-    printf("Error : template file is requested.\n");
-  if (std::get<std::string>(value["eulerfile"]).empty())
-    printf("Error : euler file is requested.\n");
-  if (std::get<float>(value["angpix"]) < 0)
-    printf("Error : angpix is requested.\n");
-  if (std::get<float>(value["phistep"]) < 0)
-    printf("Error : phistep is requested.\n");
-  if (std::get<float>(value["kk"]) < 0)
-    printf("Error : kk is requested.\n");
-  if (std::get<float>(value["energy"]) < 0)
-    printf("Error : energy is requested.\n");
-  if (std::get<float>(value["cs"]) < 0)
-    printf("Error : cs is requested.\n");
-  if (std::get<float>(value["Highres"]) < 0)
-    printf("Error : highres is requested.\n");
-  if (std::get<float>(value["Lowres"]) < 0)
-    printf("Error : lowres is requested.\n");
-  if (std::get<float>(value["diameter"]) < 0)
-    printf("Error : diameter is requested.\n");
-}
-
-EulerData::EulerData(const std::string& eulerf) {
-  std::ifstream eulerfile(eulerf);
-  if (!eulerfile) {
-    printf("Open euler file failed: %s\n\n", eulerf.c_str());
-    return;
-  }
-  // float x, y, z;
-  // while (eulerfile >> x >> y >> z) {
-  //   this->euler1.push_back(x);
-  //   this->euler2.push_back(y);
-  //   this->euler3.push_back(z);
-  // }
-  float alt, az, phi;
-  std::string line;
-  while (std::getline(eulerfile, line)) {
-    if (sscanf(line.c_str(), "%*f %f %f %f", &alt, &az, &phi) == 3 ||
-        sscanf(line.c_str(), "%f %f %f", &alt, &az, &phi) == 3 ||
-        sscanf(line.c_str(), "%*d %*s %f %f %f", &alt, &az, &phi) == 3) {
-        this->euler1.push_back(alt);
-        this->euler2.push_back(az);
-        this->euler3.push_back(phi);
+               }, this->value[key]);
     }
-  }
+    checkRequestPara();
 }
 
-std::vector<LST::Entry> LST::load(const std::string& lst_path) {
-  std::ifstream lstfile{lst_path};
-  if (!lstfile) {
-    printf("Open LST file failed: %s\n\n", lst_path.c_str());
-    return {};
-  }
+void Config::checkRequestPara() 
+{
+    using namespace std;
+    if (get<string>(value["Input"]).empty())
+        printf("Error : lst/star file is required.\n");
+    if (get<string>(value["Picking_templates"]).empty())
+        printf("Error : File containing picking templates is required.\n");
+    if (get<string>(value["Euler_angles_file"]).empty())
+        printf("Error : File containing Euler angles is required.\n");
+    if (get<float>(value["Pixel_size"]) < 0)
+        printf("Error : Pixel size (Angstrom) is required.\n");
+    if (get<float>(value["Phi_step"]) < 0)
+        printf("Error : Search step (degree) of angle phi is required.\n");
+    if (get<float>(value["n"]) < 0)
+        printf("Error : n is required.\n");
+    if (get<float>(value["Voltage"]) < 0)
+        printf("Error : Voltage (kV) is required.\n");
+    if (get<float>(value["Cs"]) < 0)
+        printf("Error : Spherical aberration (mm) is required.\n");
+    if (get<float>(value["Highest_resolution"]) < 0)
+        printf("Error : Highest resolution (Angstrom) is required.\n");
+    if (get<float>(value["Lowest_resolution"]) < 0)
+        printf("Error : Lowest resolution (Angstrom) is required.\n");
+    if (get<float>(value["Diameter"]) < 0)
+        printf("Error : Particle diameter (Angstrom) is required.\n");
+}
 
-  std::vector<Entry> ret;
-  std::string tmp;
-  Entry e;
-  while (std::getline(lstfile, tmp)) {
-    if (tmp.length()) {
-      if (tmp[0] == '#') continue;
+EulerData::EulerData(const std::string & eulerf) 
+{
+    std::ifstream eulerfile(eulerf);
+    if (!eulerfile) 
+    {
+        std::printf("File containing Euler angles does NOT exist: %s\n\n", eulerf.c_str());
+        return;
     }
-    char buf[1024] = {'\0'};
-    std::sscanf(tmp.c_str(), "%d %1023s defocus=%lf dfdiff=%lf dfang=%lf", &e.unused, buf, &e.defocus, &e.dfdiff, &e.dfang);
-    e.rpath = std::string{buf};
-    ret.emplace_back(std::move(e));
-  }
-
-  return ret;
+    // float x, y, z;
+    // while (eulerfile >> x >> y >> z) {
+    //   this->euler1.push_back(x);
+    //   this->euler2.push_back(y);
+    //   this->euler3.push_back(z);
+    // }
+    float alt, az, phi;
+    std::string line;
+    // 从角度文件中读取欧拉角
+    while (std::getline(eulerfile, line)) 
+    {
+        if (std::sscanf(line.c_str(), "%*f %f %f %f", &alt, &az, &phi) == 3 ||
+            std::sscanf(line.c_str(), "%f %f %f", &alt, &az, &phi) == 3 ||
+            std::sscanf(line.c_str(), "%*d %*s %f %f %f", &alt, &az, &phi) == 3) 
+        {
+            this->euler1.push_back(alt);
+            this->euler2.push_back(az);
+            this->euler3.push_back(phi);
+        }
+    }
 }
 
-void LST::print(const std::vector<LST::Entry>& lst) {
-    for (auto&& e : lst) {
+std::vector<LST::Entry> LST::load(const std::string & lst_path) 
+{
+    std::ifstream lstfile{lst_path};
+    if (!lstfile) 
+    {
+        std::printf("LST file does NOT exist: %s\n\n", lst_path.c_str());
+        return {};
+    }
+
+    std::vector<Entry> ret;
+    std::string tmp;
+    Entry e;
+    while (std::getline(lstfile, tmp)) 
+    {
+        if (tmp.length()) 
+        {
+            if (tmp[0] == '#') 
+                continue; // 跳过注释
+        }
+        char buf[1024] = {'\0'};
+        std::sscanf(tmp.c_str(), "%d %1023s defocus=%lf dfdiff=%lf dfang=%lf", &e.unused, buf, &e.defocus, &e.dfdiff, &e.dfang); // 读取.lst文件中的参数，单位微米
+        e.rpath = std::string{buf};
+        ret.emplace_back(std::move(e)); // 将e中的数据剪切并粘贴到矢量ret中
+    }
+    return ret;
+}
+
+void LST::print(const std::vector<LST::Entry> & lst) 
+{
+    for (auto&& e : lst) 
+    {
         std::printf("%d %s defocus=%lf dfdiff=%lf dfang=%lf\n", e.unused, e.rpath.c_str(), e.defocus, e.dfdiff, e.dfang);
     }
 }

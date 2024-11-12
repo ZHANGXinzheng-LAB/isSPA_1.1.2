@@ -1,25 +1,28 @@
 #include "emdata.h"
 
 const int NVALIDFMT = 7;  // was 10;
-const char* VALIDFMT[] = {"gif", "pgm", "ppm", "pnm", "rgb", "tga", "bmp"};
+const char * VALIDFMT[] = {"gif", "pgm", "ppm", "pnm", "rgb", "tga", "bmp"};
 
 Euler::~Euler() {}
 
-Euler::Euler() {
-  alt_ = 0.;
-  az_ = 0.;
-  phi_ = 0.;
-  init();
+Euler::Euler() 
+{
+    alt_ = 0.;
+    az_ = 0.;
+    phi_ = 0.;
+    init();
 }  // already rectified
 
-Euler::Euler(float alt, float az, float phi) {  // EMAN by default
-  setAngle(alt, az, phi);
-  init();
+Euler::Euler(float alt, float az, float phi) 
+{  // EMAN by default
+    setAngle(alt, az, phi);
+    init();
 }
 
-Euler::Euler(float a1, float a2, float a3, int typ) {
-  setAngle(a1, a2, a3, typ);
-  init();
+Euler::Euler(float a1, float a2, float a3, int typ) 
+{
+    setAngle(a1, a2, a3, typ);
+    init();
 }  // end EMAN, IMAGIC, SPIDER constructor
 
 Euler::Euler(float e1, float e2, float e3, float e0, int typ) {
@@ -38,7 +41,8 @@ void Euler::init() {
   csym = 0;
 }
 
-void Euler::setAngle(float a1, float a2, float a3, int typ) {
+void Euler::setAngle(float a1, float a2, float a3, int typ) 
+{
   alt_ = a1;
   az_ = a2;
   phi_ = a3;
@@ -102,11 +106,13 @@ void Euler::setAngle(float* m) {
   rectify();
 }
 
-void Euler::rectify() {
+void Euler::rectify() 
+{
   if (!std::isfinite(phi_)) phi_ = 0;
   if (!std::isfinite(alt_)) alt_ = 0;
   if (!std::isfinite(az_)) az_ = 0;
-  if (sqrt(alt_ * alt_) <= .0001) {
+  if (sqrt(alt_ * alt_) <= .0001) 
+  {
     az_ += phi_;
     phi_ = 0;
   }
@@ -129,36 +135,38 @@ bool is_machine_big_endian() {
   }
 }
 
-emdata::emdata() {
-  // int i;
+emdata::emdata() 
+{
+    // int i;
 
-  header.nx = header.ny = header.nz = 0;
-  header.dx = header.dy = header.dz = 0;
-  header.min = header.max = header.mean = header.sigma = 0;
-  header.pixel = 1.0f;
-  header.xorigin = header.yorigin = header.zorigin = 0.0;
-  header.path[0] = 0;
-  header.pathnum = 0;
-  header.name[0] = 0;
-  header.rocount = 0;
-  header.micrograph_id[0] = '\0';
-  header.particle_location_center_x = 0.0;
-  header.particle_location_center_y = 0.0;
-  header.center_x = -999.0;  // negative means no initialization
-  header.center_y = -999.0;
-  header.map_type = NORMAL;
-  header.orientation_convention = Euler::EMAN;
+    header.nx = header.ny = header.nz = 0;
+    header.dx = header.dy = header.dz = 0;
+    header.min = header.max = header.mean = header.sigma = 0;
+    header.pixel = 1.0f;
+    header.xorigin = header.yorigin = header.zorigin = 0.0;
+    header.path[0] = 0;
+    header.pathnum = 0;
+    header.name[0] = 0;
+    header.rocount = 0;
+    header.micrograph_id[0] = '\0';
+    header.particle_location_center_x = 0.0;
+    header.particle_location_center_y = 0.0;
+    header.center_x = -999.0;  // negative means no initialization
+    header.center_y = -999.0;
+    header.map_type = NORMAL;
+    header.orientation_convention = Euler::EMAN;
 
-  rdata = NULL;
-  euler.setAngle(0, 0, 0);
-  mrch = NULL;
-  imagich = NULL;
-  spiderH = NULL;
-  fft = NULL;
-  rfp = NULL;
+    rdata = nullptr;
+    euler.setAngle(0, 0, 0);
+    mrch = nullptr;
+    imagich = nullptr;
+    spiderH = nullptr;
+    fft = nullptr;
+    rfp = nullptr;
 }
 
-emdata::~emdata() {
+emdata::~emdata() 
+{
   // if (rdata) Sfree(rdata,1);
   if (rdata) free(rdata);
   // if (mrch) Sfree(mrch,1);
@@ -170,61 +178,75 @@ emdata::~emdata() {
   if (rfp) delete rfp;
 }
 
-int emdata::setSize(int x, int y, int z) {
-  if (x <= 0) x = 1;
-  if (y <= 0) y = 1;
-  if (z <= 0) z = 1;
-  if (y == 1 && z != 1) {
-    y = z;
-    z = 1;
-  }
-  if (x == 1 && y != 1) {
-    x = y;
-    y = 1;
-  }
-  header.nx = x;
-  header.ny = y;
-  header.nz = z;
-  rdata = (float*)realloc(rdata, x * y * z * sizeof(float));
-  return 0;
+int emdata::setSize(int x, int y, int z) 
+{
+    // 给数据分配内存，默认数据类型为float
+    if (x <= 0) x = 1;
+    if (y <= 0) y = 1;
+    if (z <= 0) z = 1;
+    if (y == 1 && z != 1) 
+    {
+        y = z;
+        z = 1;
+    }
+    if (x == 1 && y != 1) 
+    {
+        x = y;
+        y = 1;
+    }
+    header.nx = x;
+    header.ny = y;
+    header.nz = z;
+    rdata = (float*)realloc(rdata, x * y * z * sizeof(float));
+    return 0;
 }
 
-int emdata::readImage(const char* filespec, int n, int nodata) {
-  FILE* in = fopen(filespec, "r");
-  if (in == nullptr) {
-    std::printf("Cannot open \"%s\"\n", filespec);
-    std::exit(-1);
-  }
-  fclose(in);
-
-  if (EMhdf::is_valid(filespec)) {  // valid HDF file
-    int ret = EMhdf::init_test(filespec);
-    int err = 0;
-    if (ret == 0) {  // old-style HDF format
-      EMhdf hdf_file(filespec);
-      err = readHDF(filespec, n, nodata);
-      if (err) {
-        printf("failed in readHDF()\n");
-        setSize(10, 10, 1);
-        zero();
-      }
-    } else {  // new-style HDF format
-      err = readHDF2(filespec, n, nodata);
-      if (err) {
-        printf("failed in readHDF2()\n");
-        setSize(10, 10, 1);
-        zero();
-      }
+int emdata::readImage(const char * filespec, int n, int nodata) 
+{
+    FILE * in = std::fopen(filespec, "r");
+    if (in == nullptr) 
+    {
+        std::printf("File containing templates does NOT exist \"%s\"\n", filespec);
+        std::exit(-1);
     }
-    return err;
-  }
+    std::fclose(in);
 
-  int r = readMRC(filespec, nodata, n);
-  if (r) {
-    setSize(10, 10, 1);
-    zero();
-  }
-  return r;
+    if (EMhdf::is_valid(filespec)) // valid HDF file
+    {  
+        int ret = EMhdf::init_test(filespec);
+        int err = 0;
+        if (ret == 0) // old-style HDF format
+        {  
+            EMhdf hdf_file(filespec);
+            err = readHDF(filespec, n, nodata);
+            if (err) 
+            {
+                std::printf("Failed in readHDF()\n");
+                setSize(10, 10, 1);
+                zero();
+            }
+        } 
+        else 
+        {  // new-style HDF format
+            // std::printf("New-style HDF format!\n");
+            err = readHDF2(filespec, n, nodata);
+            if (err) 
+            {
+                std::printf("Failed in readHDF2()\n");
+                setSize(10, 10, 1);
+                zero();
+            }
+        }
+        return err;
+    }
+    // 不是HDF文件，则试着读取mrc文件
+    int r = readMRC(filespec, nodata, n);
+    if (r) 
+    {
+        setSize(10, 10, 1);
+        zero();
+    }
+    return r;
 }
 
 void emdata::zero(float sig) {
@@ -360,78 +382,98 @@ int emdata::readHDF(const char* fsp, int image_index, int nodata) {
   return 0;
 }
 
-int emdata::readHDF2(const char* fsp, int image_index, int nodata) {
-  if (image_index < 0) {
-    image_index = 0;
-  }
-
-  if (strrchr(fsp, '/') == NULL) {
-    setName(fsp);
-  } else {
-    setName(strrchr(fsp, '/') + 1);
-  }
-  setPath(fsp);
-
-  EMhdf2* hdf_file = new EMhdf2(fsp, "r");
-  emdataHeader* head = hdf_file->read_header(image_index, this->euler);
-
-  if (head->nz > 1) {
-    setSize(head->nx, head->ny, head->nz);
-  } else if (head->ny > 1) {
-    setSize(head->nx, head->ny, 1);
-  } else if (head->nx > 1) {
-    setSize(head->nx, 1, 1);
-  } else {
-    setSize(10, 10, 1);
-    zero();
-    return -1;
-  }
-
-  if (!nodata) {
-    int err = hdf_file->read_data(rdata, image_index);
-    if (err) {
-      setSize(10, 10, 1);
-      zero();
-      return -1;
+int emdata::readHDF2(const char * fsp, int image_index, int nodata) 
+{
+    if (image_index < 0) 
+    {
+        image_index = 0;
     }
-  }
-  header = *head;
 
-  if (head) {
-    delete head;
-    head = 0;
-  }
-  if (hdf_file) {
-    delete hdf_file;
-    hdf_file = 0;
-  }
-  return 0;
+    if (std::strrchr(fsp, '/') == nullptr) 
+    {
+        setName(fsp);
+    } 
+    else 
+    {
+        setName(strrchr(fsp, '/') + 1);
+    }
+    setPath(fsp);
+
+    EMhdf2 * hdf_file = new EMhdf2(fsp, "r");
+    emdataHeader * head = hdf_file->read_header(image_index, this->euler);
+
+    if (head->nz > 1) 
+    {
+        setSize(head->nx, head->ny, head->nz);
+    } 
+    else if (head->ny > 1) 
+    {
+        setSize(head->nx, head->ny, 1);
+    } 
+    else if (head->nx > 1) 
+    {
+        setSize(head->nx, 1, 1);
+    } 
+    else 
+    {
+        setSize(10, 10, 1);
+        zero();
+        return -1;
+    }
+
+    if (!nodata) 
+    {
+        int err = hdf_file->read_data(rdata, image_index);
+        if (err) 
+        {
+            setSize(10, 10, 1);
+            zero();
+            return -1;
+        }
+    }
+    header = *head;
+
+    if (head) 
+    {
+        delete head;
+        head = 0;
+    }
+    if (hdf_file) 
+    {
+        delete hdf_file;
+        hdf_file = 0;
+    }
+    return 0;
 }
 
 // Can not work when read complex
-int emdata::readMRC(const char* fsp, int nodata, int n) {
-  FILE* in;
+int emdata::readMRC(const char * fsp, int nodata, int n) 
+{
+  FILE * in;
   int i, j, l, pipe = 0;
   int ord = 0;   // 1 if the file order is MSB first
   int mord = 0;  // 1 if the machine order is MSB first
   float f, a, p;
-  char s[800], *m2, w;
+  char s[800], * m2, w;
   unsigned char *cdata, *cdata2, c, t;
-  short* sdata = 0;
-  ;
-  unsigned short* usdata = 0;
-  static const char* str[] = {"char", "short", "float", "short complex", "float complex"};
-  static const char* str2[] = {"", "byte reversed", ""};
-  static const char* str3[] = {"", "compressed"};
+  short * sdata = 0;
+  
+  unsigned short * usdata = 0;
+  static const char * str[] = {"char", "short", "float", "short complex", "float complex"};
+  static const char * str2[] = {"", "byte reversed", ""};
+  static const char * str3[] = {"", "compressed"};
   int nx = header.nx;
   int ny = header.ny;
   int nz = header.nz;
 
   if (!mrch) mrch = (mrcH*)malloc(sizeof(mrcH));
 
-  if (fsp == NULL) {
+  if (fsp == NULL) 
+  {
     in = stdin;
-  } else {
+  } 
+  else 
+  {
     if (strcmp(&fsp[strlen(fsp) - 3], ".gz") == 0 || strcmp(&fsp[strlen(fsp) - 2], ".Z") == 0) {
       sprintf(s, "zcat %s", fsp);
       in = popen(s, "rb");
@@ -462,9 +504,7 @@ int emdata::readMRC(const char* fsp, int nodata, int n) {
   mrch->labels[0][79] = 0;
   setName(mrch->labels[0]);
   if (header.name[0] == '!' && header.name[1] == '-') {
-    i = sscanf(header.name + 2, " %f %f %f %f %f %f %f %f %f %f %f", header.ctf, header.ctf + 1,
-               header.ctf + 2, header.ctf + 3, header.ctf + 4, header.ctf + 5, header.ctf + 6,
-               header.ctf + 7, header.ctf + 8, header.ctf + 9, header.ctf + 10);
+    i = sscanf(header.name + 2, " %f %f %f %f %f %f %f %f %f %f %f", header.ctf, header.ctf + 1, header.ctf + 2, header.ctf + 3, header.ctf + 4, header.ctf + 5, header.ctf + 6, header.ctf + 7, header.ctf + 8, header.ctf + 9, header.ctf + 10);
     if (i != 11) printf("Incomplete CTF info: %s\n", header.name);
   }
   if (header.name[0] == '!' && header.name[1] == '$') {

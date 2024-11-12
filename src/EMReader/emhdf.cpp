@@ -42,23 +42,25 @@ EMhdf::~EMhdf() {
   H5Fclose(file);
 }
 
-int EMhdf::is_valid(const char* filename) {
-  int valid = 0;
-
-  if (filename) {
-    FILE* in = fopen(filename, "r");
-    if (in) {
-      char x[8];
-      char y[8] = {(char)137, 72, 68, 70, 13, 10, 26, 10};
-      int realRead = fread(x, 8, 1, in);
-      if (realRead == 0)
-        valid = 0;
-      fclose(in);
-      if (strncmp(x, y, 8) == 0)
-        valid = 1;
+int EMhdf::is_valid(const char * filename) 
+{
+    int valid = 0;
+    if (filename) 
+    {
+        FILE * in = std::fopen(filename, "r");
+        if (in) 
+        {
+            char x[8];
+            char y[8] = {(char)137, 72, 68, 70, 13, 10, 26, 10};
+            int realRead = std::fread(x, 8, 1, in); //从文件中一次读取8个字符，并储存在x中，返回读取的字符个数
+            if (realRead == 0)
+                valid = 0;
+            std::fclose(in);
+            if (std::strncmp(x, y, 8) == 0) //比较x和y的前8位，若相同，则valid=1
+                valid = 1;
+        }
     }
-  }
-  return valid;
+    return valid;
 }
 
 void EMhdf::close_dataset(hid_t dataset) {
@@ -96,23 +98,28 @@ const char* EMhdf::get_item_name(Nametype type) {
   return "unknown";
 }
 
-int EMhdf::init_test(const char* hdf_filename) {
-  H5Eset_auto1(0, 0); // Turn off console error logging.
+int EMhdf::init_test(const char * hdf_filename) 
+{
+    // 查看HDF文件中是否有一项特征名为“num_dataset”
+    H5Eset_auto1(0, 0); // Turn off console error logging.
 
-  hid_t fileid = H5Fopen(hdf_filename, H5F_ACC_RDWR, H5Pcreate(H5P_FILE_ACCESS));
-  hid_t groupid = H5Gopen1(fileid, "/");
-  hid_t attid = H5Aopen_name(groupid, "num_dataset");
+    hid_t file_id = H5Fopen(hdf_filename, H5F_ACC_RDWR, H5Pcreate(H5P_FILE_ACCESS));
+    hid_t group_id = H5Gopen1(file_id, "/");
+    hid_t att_id = H5Aopen_name(group_id, "num_dataset");
 
-  if (attid < 0) {
-    H5Gclose(groupid);
-    H5Fclose(fileid);
-    return -1;
-  } else {
-    H5Aclose(attid);
-    H5Gclose(groupid);
-    H5Fclose(fileid);
-    return 0;
-  }
+    if (att_id < 0) 
+    {
+        H5Gclose(group_id);
+        H5Fclose(file_id);
+        return -1;
+    } 
+    else 
+    {
+        H5Aclose(att_id);
+        H5Gclose(group_id);
+        H5Fclose(file_id);
+        return 0;
+    }
 }
 
 int* EMhdf::read_dims(int dataset_id, int* p_ndim) {
@@ -147,9 +154,10 @@ int* EMhdf::read_dims(int dataset_id, int* p_ndim) {
   return dims1;
 }
 
-void EMhdf::hdf_err_off() {
-  H5Eget_auto1(&old_func, &old_client_data);
-  H5Eset_auto1(0, 0);
+void EMhdf::hdf_err_off() 
+{
+    H5Eget_auto1(&old_func, &old_client_data);
+    H5Eset_auto1(0, 0);
 }
 
 void EMhdf::hdf_err_on() { H5Eset_auto1(old_func, old_client_data); }
@@ -176,38 +184,48 @@ void EMhdf::set_dataset(int dataset_id) {
   }
 }
 
-EMhdf::EMhdf(const char* filename, const char* rw_mode) {
-  assert(filename);
-  assert(rw_mode);
+EMhdf::EMhdf(const char * filename, const char * rw_mode) 
+{
+    assert(filename);
+    assert(rw_mode);
 
-  if (strcmp(rw_mode, "r") == 0) {
-    file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-  } else if (strcmp(rw_mode, "rw") == 0) {
-    hdf_err_off();
-    file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
-    hdf_err_on();
-    if (file < 0) {
-      file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-      H5Fclose(file);
-      file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
+    if (strcmp(rw_mode, "r") == 0) 
+    {
+        file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+    } 
+    else if (strcmp(rw_mode, "rw") == 0) 
+    {
+        hdf_err_off();
+        file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
+        hdf_err_on();
+        if (file < 0) 
+        {
+            file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+            H5Fclose(file);
+            file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
+        }
+    } 
+    else if (strcmp(rw_mode, "w") == 0) 
+    {
+        file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    } 
+    else 
+    {
+        file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
     }
-  } else if (strcmp(rw_mode, "w") == 0) {
-    file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  } else {
-    file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
-  }
-  if (file < 0) {
-    fprintf(stderr, "EMhdf: cannot open file %s\n", filename);
-  }
+    if (file < 0) 
+    {
+        std::fprintf(stderr, "EMhdf: cannot open file %s\n", filename);
+    }
 
-  group = H5Gopen1(file, get_item_name(ROOT_GROUP));
-  cur_dataset = -1;
-  cur_dataset_id = -1;
+    group = H5Gopen1(file, get_item_name(ROOT_GROUP));
+    cur_dataset = -1;
+    cur_dataset_id = -1;
 
-  old_func = 0;
-  old_client_data = 0;
-  H5Giterate(file, get_item_name(ROOT_GROUP), NULL, file_info, &dataset_ids);
-  create_enum_types();
+    old_func = 0;
+    old_client_data = 0;
+    H5Giterate(file, get_item_name(ROOT_GROUP), NULL, file_info, &dataset_ids);
+    create_enum_types();
 }
 
 int EMhdf::read_data(int dataset_id, float** p_data) {
