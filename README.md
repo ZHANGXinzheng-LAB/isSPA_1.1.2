@@ -5,26 +5,26 @@ In this version, several scripts are added to do the preprocess and postprocess.
 
 1. We previously observed that isSPA might produce inconsistent results on different machines with varying GPU cards and CUDA versions. This issue has now been partially resolved.
   
-Experimental tests show that this version identifies more correct particles and achieves higher resolution under the same data processing methods (including Class3D, Refine3D, Postprocess, and other subsequent processing).
+  Experimental tests show that this version identifies more correct particles and achieves higher resolution under the same data processing methods (including Class3D, Refine3D, Postprocess, and other subsequent processing).
 
 2. In this version, when ‘norm_type=1’ is in the config, the computation is performed on the entire image. Experimental tests indicate that the results with ‘norm_type=1’ are better than those with ‘norm_type=0’, with more particles identified.
 When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720x720) sections for computation, and the normalization algorithm is not applied. This setting is suitable for machines with less powerful GPUs, as processing large images can be demanding on the GPU, and omitting normalization can speed up the computation.
 
 ## Installation
 1.	Download HDF5 package from the official website:
-https://support.hdfgroup.org/downloads/index.html 
+  https://support.hdfgroup.org/downloads/index.html 
 2.	Uncompress it, such as 
-tar -xzf hdf5-1.14.5.tar.gz
+  tar -xzf hdf5-1.14.5.tar.gz
 3.	Install HDF5 according to ‘./hdf5-1.14.5/release_docs/INSTALL_Autotools.txt’.
 4.	Enter isSPA_1.1.2, and modify LIB_HDF5 and INCLUDE_HDF5 in the Makefile according to the installation paths in step 3.
 5.	Execute the following commands:
-a)	make -j N (N is the number of available threads)
-b)	make install
-6.	(Recommended) Add the absolute paths of ‘./isSPA_1.1.2/build’ and ‘./isSPA_1.1.2/scripts’ to environment variables. For example,
-export PATH=/home/user/Software/isSPA_1.1.2/build:$PATH
-export PATH=/home/user/Software/isSPA_1.1.2/scripts:$PATH
+  a)	make -j N (N is the number of available threads)
+  b)	make install
+6.	(Recommended) Add the absolute paths of ‘./isSPA_1.1.2/build’ and ‘./isSPA_1.1.2/isSPA_scripts’ to environment variables. For example,
+  export PATH=/home/user/Software/isSPA_1.1.2/build:$PATH
+  export PATH=/home/user/Software/isSPA_1.1.2/isSPA_scripts:$PATH
 7.	(Recommended) Add the absolute path of the library of HDF5 to LD_LIBRARY_PATH. For instance,
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 
 
 ## Answers to some frequently asked questions
