@@ -1,5 +1,5 @@
-#include <cuda_runtime.h>
-#include <cufft.h>
+#include <musa_runtime.h>
+#include <mufft.h>
 #include <omp.h>
 
 #include <chrono>
@@ -16,18 +16,18 @@
 struct SearchNoNorm::impl {
   struct Device {
     struct FFT {
-      cufftHandle templates;
-      cufftHandle image;
-      cufftHandle raw_image;
+      mufftHandle templates;
+      mufftHandle image;
+      mufftHandle raw_image;
     } fft;
 
-    cudaStream_t stream;
+    musaStream_t stream;
 
-    device_unique_ptr<cufftComplex[]> padded_templates;
-    device_unique_ptr<cufftComplex[]> CCG;
+    device_unique_ptr<mufftComplex[]> padded_templates;
+    device_unique_ptr<mufftComplex[]> CCG;
 
-    device_unique_ptr<cufftComplex[]> padded_image;
-    device_unique_ptr<cufftComplex[]> padded_rotated_image;
+    device_unique_ptr<mufftComplex[]> padded_image;
+    device_unique_ptr<mufftComplex[]> padded_rotated_image;
 
     device_unique_ptr<double[]> sigmas;
     device_unique_ptr<float[]> image;
@@ -47,22 +47,23 @@ struct SearchNoNorm::impl {
   } host;
 };
 
-SearchNoNorm::SearchNoNorm(const Config& c, const EulerData& e, Size img, int device)
+SearchNoNorm::SearchNoNorm(const Config & c, const EulerData & e, Size img, int device)
     : para(c),
       euler(e),
-      padding_size(c.geti("window_size")),
-      overlap(c.geti("overlap")),
-      invert(c.geti("invert")),
-      phase_flip(c.geti("phase_flip")),
-      phi_step(c.getf("phistep")),
+      padding_size(c.geti("Window_size")),
+      overlap(c.geti("Overlap")),
+      invert(c.geti("Invert")),
+      phase_flip(c.geti("Phase_flip")),
+      phi_step(c.getf("Phi_step")),
       batch_size(e.size()),
       nx(img.width),
       ny(img.height),
       line_count(0),
-      pimpl(std::make_unique<impl>()) {
-  std::cout << "Thread " << std::this_thread::get_id() << " set device " << device << "\n";
+      pimpl(std::make_unique<impl>()) 
+{
+  std::cout << "Thread " << std::this_thread::get_id() << " sets device " << device << "\n";
   pimpl->dev.id = device;
-  cudaSetDevice(device);
+  musaSetDevice(device);
 
   padded_template_size = padding_size * padding_size;
   // set nx = ny = tile_size, not using original image size
@@ -88,10 +89,10 @@ SearchNoNorm::SearchNoNorm(const Config& c, const EulerData& e, Size img, int de
   // N = max{num of tmp, num of subimgs}
   batch_size = std::max(batch_size, static_cast<size_t>(block_x * block_y));
 
-  cudaStreamCreate(&pimpl->dev.stream);
+  musaStreamCreate(&pimpl->dev.stream);
   pimpl->dev.padded_templates =
-      make_device_unique<cufftComplex[]>(padded_template_size * batch_size);
-  pimpl->dev.CCG = make_device_unique<cufftComplex[]>(padded_template_size * batch_size);
+      make_device_unique<mufftComplex[]>(padded_template_size * batch_size);
+  pimpl->dev.CCG = make_device_unique<mufftComplex[]>(padded_template_size * batch_size);
   pimpl->host.sigmas = make_host_unique_pinned<double[]>(batch_size);
   pimpl->dev.sigmas = make_device_unique<double[]>(batch_size);
   pimpl->dev.ra = make_device_unique<float[]>(batch_size * RA_SIZE);
@@ -103,34 +104,34 @@ SearchNoNorm::SearchNoNorm(const Config& c, const EulerData& e, Size img, int de
   pimpl->host.ubuf = std::make_unique<float[]>(4 * batch_size);
 
   pimpl->dev.fft.templates = MakeFFTPlan(padding_size, padding_size, batch_size);
-  cufftSetStream(pimpl->dev.fft.templates, pimpl->dev.stream);
+  mufftSetStream(pimpl->dev.fft.templates, pimpl->dev.stream);
 
   pimpl->dev.image = make_device_unique<float[]>(nx * ny);
   pimpl->dev.padded_image =
-      make_device_unique<cufftComplex[]>(block_x * block_y * padded_template_size);
+      make_device_unique<mufftComplex[]>(block_x * block_y * padded_template_size);
   pimpl->dev.padded_rotated_image =
-      make_device_unique<cufftComplex[]>(block_x * block_y * padded_template_size);
+      make_device_unique<mufftComplex[]>(block_x * block_y * padded_template_size);
 
   pimpl->dev.fft.image = MakeFFTPlan(padding_size, padding_size, block_x * block_y);
-  cufftSetStream(pimpl->dev.fft.image, pimpl->dev.stream);
+  mufftSetStream(pimpl->dev.fft.image, pimpl->dev.stream);
   pimpl->dev.fft.raw_image = MakeFFTPlan(ny, nx, 1);
-  cufftSetStream(pimpl->dev.fft.raw_image, pimpl->dev.stream);
+  mufftSetStream(pimpl->dev.fft.raw_image, pimpl->dev.stream);
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
   CHECK();
   DeviceMemoryUsage();
 }
 
 SearchNoNorm::~SearchNoNorm() {
-  cufftDestroy(pimpl->dev.fft.raw_image);
-  cufftDestroy(pimpl->dev.fft.image);
-  cufftDestroy(pimpl->dev.fft.templates);
-  cudaStreamDestroy(pimpl->dev.stream);
+  mufftDestroy(pimpl->dev.fft.raw_image);
+  mufftDestroy(pimpl->dev.fft.image);
+  mufftDestroy(pimpl->dev.fft.templates);
+  musaStreamDestroy(pimpl->dev.stream);
 }
 
 void SearchNoNorm::LoadTemplate(const Templates& temp) {
-  auto padded_templates = std::make_unique<cufftComplex[]>(padded_template_size * batch_size);
-  std::memset(padded_templates.get(), 0, sizeof(cufftComplex) * padded_template_size * batch_size);
+  auto padded_templates = std::make_unique<mufftComplex[]>(padded_template_size * batch_size);
+  std::memset(padded_templates.get(), 0, sizeof(mufftComplex) * padded_template_size * batch_size);
 
   // padding
   int sx = (padding_size - temp.width) / 2;
@@ -147,11 +148,11 @@ void SearchNoNorm::LoadTemplate(const Templates& temp) {
     }
   }
 
-  cudaMemcpyAsync(pimpl->dev.padded_templates.get(), padded_templates.get(),
-                  sizeof(cufftComplex) * padded_template_size * batch_size, cudaMemcpyHostToDevice,
+  musaMemcpyAsync(pimpl->dev.padded_templates.get(), padded_templates.get(),
+                  sizeof(mufftComplex) * padded_template_size * batch_size, musaMemcpyHostToDevice,
                   pimpl->dev.stream);
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
 }
 
 void SearchNoNorm::LoadImage(const TileImages::Tile& tile) {
@@ -159,19 +160,20 @@ void SearchNoNorm::LoadImage(const TileImages::Tile& tile) {
 #pragma omp parallel for
     for (int i = 0; i < nx * ny; i++) tile.data[i] = -tile.data[i];
   }
-  cudaMemcpyAsync(pimpl->dev.image.get(), tile.data.get(), sizeof(float) * nx * ny,
-                  cudaMemcpyHostToDevice, pimpl->dev.stream);
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaMemcpyAsync(pimpl->dev.image.get(), tile.data.get(), sizeof(float) * nx * ny,
+                  musaMemcpyHostToDevice, pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
 }
 
-void SearchNoNorm::SetParams(const TileImages::Params& params) {
+void SearchNoNorm::SetParams(const TileImages::Params& params) 
+{
   // set params
   para.defocus = -params.defocus;
   para.dfang = params.dfang;
   para.dfdiff = params.dfdiff;
   para.dfu = -params.defocus + params.dfdiff;  // -defocus is minus, so abs(dfu) < abs(dfv)
   para.dfv = -params.defocus - params.dfdiff;
-  para.lambda = 12.2639 / sqrt(para.energy * 1000.0 + 0.97845 * para.energy * para.energy);
+  para.lambda = 12.2643 / sqrt(para.energy * 1000.0 + 0.97848 * para.energy * para.energy);
   para.ds = 1 / (para.apix * padding_size);
 }
 
@@ -186,9 +188,9 @@ void SearchNoNorm::PreprocessTemplate() {
     low_bound = (r - 1) * (r - 1);
   }
 
-  cudaMemsetAsync(pimpl->dev.CCG.get(), 0, sizeof(cufftComplex) * padded_template_size * batch_size,
+  musaMemsetAsync(pimpl->dev.CCG.get(), 0, sizeof(mufftComplex) * padded_template_size * batch_size,
                   pimpl->dev.stream);
-  cudaMemsetAsync(pimpl->dev.reduction_buf.get(), 0,
+  musaMemsetAsync(pimpl->dev.reduction_buf.get(), 0,
                   4 * sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
                   pimpl->dev.stream);
 
@@ -196,33 +198,33 @@ void SearchNoNorm::PreprocessTemplate() {
   generate_mask<<<nblocks, BLOCK_SIZE, BLOCK_SIZE * sizeof(float), pimpl->dev.stream>>>(
       l, pimpl->dev.CCG.get(), r, pimpl->dev.reduction_buf.get(), up_bound, low_bound);
 
-  cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+  musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                   sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
-                  cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                  musaMemcpyDeviceToHost, pimpl->dev.stream);
 
   std::memset(pimpl->host.ubuf.get(), 0, batch_size * sizeof(float));
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
   for (int k = 0; k < padded_template_size * batch_size / BLOCK_SIZE; k++) {
     int id = k / (padded_template_size / BLOCK_SIZE);
     pimpl->host.ubuf[id] += pimpl->host.reduction_buf[k];
   }
 
   // Calculate dot of mask and all templates
-  cudaMemcpyAsync(pimpl->dev.means.get(), pimpl->host.ubuf.get(), sizeof(float) * batch_size,
-                  cudaMemcpyHostToDevice, pimpl->dev.stream);
+  musaMemcpyAsync(pimpl->dev.means.get(), pimpl->host.ubuf.get(), sizeof(float) * batch_size,
+                  musaMemcpyHostToDevice, pimpl->dev.stream);
 
   multiCount_dot<<<nblocks, BLOCK_SIZE, BLOCK_SIZE * sizeof(float), pimpl->dev.stream>>>(
       l, pimpl->dev.CCG.get(), pimpl->dev.padded_templates.get(), pimpl->dev.means.get(),
       pimpl->dev.reduction_buf.get());
 
-  cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+  musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                   sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
-                  cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                  musaMemcpyDeviceToHost, pimpl->dev.stream);
 
   std::memset(pimpl->host.ubuf.get(), 0, batch_size * sizeof(float));
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
   for (int k = 0; k < padded_template_size * batch_size / BLOCK_SIZE; k++) {
     int id = k / (padded_template_size / BLOCK_SIZE);
     pimpl->host.ubuf[id] += pimpl->host.reduction_buf[k];
@@ -230,17 +232,17 @@ void SearchNoNorm::PreprocessTemplate() {
 
   UpdateSigma<<<nblocks, BLOCK_SIZE, BLOCK_SIZE * sizeof(float) * 2, pimpl->dev.stream>>>(
       pimpl->dev.padded_templates.get(), pimpl->dev.reduction_buf.get());
-  cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+  musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                   2 * sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
-                  cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                  musaMemcpyDeviceToHost, pimpl->dev.stream);
 
   // put em on GPU
-  cudaMemcpyAsync(pimpl->dev.means.get(), pimpl->host.ubuf.get(), sizeof(float) * batch_size,
-                  cudaMemcpyHostToDevice, pimpl->dev.stream);
+  musaMemcpyAsync(pimpl->dev.means.get(), pimpl->host.ubuf.get(), sizeof(float) * batch_size,
+                  musaMemcpyHostToDevice, pimpl->dev.stream);
 
   std::memset(pimpl->host.ubuf.get(), 0, 2 * batch_size * sizeof(float));
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
   for (int k = 0; k < padded_template_size * batch_size / BLOCK_SIZE; k++) {
     int id = k / (padded_template_size / BLOCK_SIZE);
     pimpl->host.ubuf[2 * id] += pimpl->host.reduction_buf[2 * k];
@@ -257,8 +259,8 @@ void SearchNoNorm::PreprocessTemplate() {
   }
 
   // data[i]=(data[i]-em)/s;
-  cudaMemcpyAsync(pimpl->dev.sigmas.get(), pimpl->host.sigmas.get(), sizeof(double) * batch_size,
-                  cudaMemcpyHostToDevice, pimpl->dev.stream);
+  musaMemcpyAsync(pimpl->dev.sigmas.get(), pimpl->host.sigmas.get(), sizeof(double) * batch_size,
+                  musaMemcpyHostToDevice, pimpl->dev.stream);
   scale_each<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
       l, pimpl->dev.padded_templates.get(), pimpl->dev.means.get(), pimpl->dev.sigmas.get());
 
@@ -267,12 +269,12 @@ void SearchNoNorm::PreprocessTemplate() {
   // input: Padded IMAGE (Real SPACE)
   // output: IMAGE_whiten (Fourier SPACE in RI)
   // **************************************************************
-  cudaMemsetAsync(pimpl->dev.ra.get(), 0, batch_size * RA_SIZE * sizeof(float), pimpl->dev.stream);
-  cudaMemsetAsync(pimpl->dev.rb.get(), 0, batch_size * RA_SIZE * sizeof(float), pimpl->dev.stream);
+  musaMemsetAsync(pimpl->dev.ra.get(), 0, batch_size * RA_SIZE * sizeof(float), pimpl->dev.stream);
+  musaMemsetAsync(pimpl->dev.rb.get(), 0, batch_size * RA_SIZE * sizeof(float), pimpl->dev.stream);
 
   // Inplace FFT
-  cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
-               pimpl->dev.padded_templates.get(), CUFFT_FORWARD);
+  mufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
+               pimpl->dev.padded_templates.get(), MUFFT_FORWARD);
 
   // CUFFT will enlarge VALUE to N times. Restore it
   scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
@@ -288,12 +290,12 @@ void SearchNoNorm::PreprocessTemplate() {
   whiten_Tmp<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
       pimpl->dev.padded_templates.get(), pimpl->dev.ra.get(), pimpl->dev.rb.get(), padding_size);
 
-  cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
-               pimpl->dev.padded_templates.get(), CUFFT_INVERSE);
+  mufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
+               pimpl->dev.padded_templates.get(), MUFFT_INVERSE);
   apply_mask<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
       pimpl->dev.padded_templates.get(), para.d_m, para.edge_half_width, padding_size);
-  cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
-               pimpl->dev.padded_templates.get(), CUFFT_FORWARD);
+  mufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(),
+               pimpl->dev.padded_templates.get(), MUFFT_FORWARD);
   // CUFFT will enlarge VALUE to N times. Restore it
   scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
       pimpl->dev.padded_templates.get(), padded_template_size * batch_size, padded_template_size);
@@ -314,15 +316,15 @@ void SearchNoNorm::PreprocessTemplate() {
                                                 pimpl->dev.reduction_buf.get(), padding_size,
                                                 padding_size);
 
-  cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+  musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                   2 * sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
-                  cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                  musaMemcpyDeviceToHost, pimpl->dev.stream);
 
   // After Reduction -> compute mean for each image
   std::memset(pimpl->host.ubuf.get(), 0, 2 * batch_size * sizeof(float));
   float* infile_mean = pimpl->host.ubuf.get();
   float* counts = pimpl->host.ubuf.get() + batch_size;
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
   for (int k = 0; k < padded_template_size * batch_size / BLOCK_SIZE; k++) {
     int id = k / (padded_template_size / BLOCK_SIZE);
     infile_mean[id] += pimpl->host.reduction_buf[2 * k];
@@ -333,27 +335,27 @@ void SearchNoNorm::PreprocessTemplate() {
     infile_mean[k] = std::sqrt(infile_mean[k] / (counts[k] * counts[k]));
   }
   // Do Normalization with computed infile_mean[]
-  cudaMemcpyAsync(pimpl->dev.means.get(), infile_mean, sizeof(float) * batch_size,
-                  cudaMemcpyHostToDevice, pimpl->dev.stream);
+  musaMemcpyAsync(pimpl->dev.means.get(), infile_mean, sizeof(float) * batch_size,
+                  musaMemcpyHostToDevice, pimpl->dev.stream);
   // Contain ap2ri
   normalize<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
       pimpl->dev.padded_templates.get(), padding_size, padding_size, pimpl->dev.means.get());
-  cudaMemsetAsync(pimpl->dev.means.get(), 0, batch_size * sizeof(float), pimpl->dev.stream);
+  musaMemsetAsync(pimpl->dev.means.get(), 0, batch_size * sizeof(float), pimpl->dev.stream);
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
 }
 
 void SearchNoNorm::PreprocessImage() {
   if (phase_flip == 1) {
     int nblocks = std::ceil(nx * ny / static_cast<double>(BLOCK_SIZE));
-    cudaMemsetAsync(pimpl->dev.padded_rotated_image.get(), 0,
-                    block_x * block_y * padded_template_size * sizeof(cufftComplex),
+    musaMemsetAsync(pimpl->dev.padded_rotated_image.get(), 0,
+                    block_x * block_y * padded_template_size * sizeof(mufftComplex),
                     pimpl->dev.stream);
     float2Complex<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
         pimpl->dev.padded_rotated_image.get(), pimpl->dev.image.get(), nx, ny);
     // fft inplace
-    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_rotated_image.get(),
-                 pimpl->dev.padded_rotated_image.get(), CUFFT_FORWARD);
+    mufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_rotated_image.get(),
+                 pimpl->dev.padded_rotated_image.get(), MUFFT_FORWARD);
     scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_rotated_image.get(),
                                                          nx * ny, nx * ny);
 
@@ -362,9 +364,9 @@ void SearchNoNorm::PreprocessImage() {
         pimpl->dev.padded_rotated_image.get(), para, nx, ny);
 
     // Whiten at fourier space
-    cudaMemsetAsync(pimpl->dev.ra.get(), 0, batch_size * RA_SIZE * sizeof(float),
+    musaMemsetAsync(pimpl->dev.ra.get(), 0, batch_size * RA_SIZE * sizeof(float),
                     pimpl->dev.stream);
-    cudaMemsetAsync(pimpl->dev.rb.get(), 0, batch_size * RA_SIZE * sizeof(float),
+    musaMemsetAsync(pimpl->dev.rb.get(), 0, batch_size * RA_SIZE * sizeof(float),
                     pimpl->dev.stream);
 
     // contain ri2ap
@@ -380,20 +382,20 @@ void SearchNoNorm::PreprocessImage() {
         para);
 
     // ifft inplace
-    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_rotated_image.get(),
-                 pimpl->dev.padded_rotated_image.get(), CUFFT_INVERSE);
+    mufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_rotated_image.get(),
+                 pimpl->dev.padded_rotated_image.get(), MUFFT_INVERSE);
     Complex2float<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
         pimpl->dev.image.get(), pimpl->dev.padded_rotated_image.get(), nx, ny);
   }
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
 }
 
 void SearchNoNorm::SplitImage() {
   int l = padding_size;
   int nblocks = block_x * block_y * padded_template_size / BLOCK_SIZE;
 
-  cudaMemsetAsync(pimpl->dev.padded_image.get(), 0,
-                  block_x * block_y * padded_template_size * sizeof(cufftComplex),
+  musaMemsetAsync(pimpl->dev.padded_image.get(), 0,
+                  block_x * block_y * padded_template_size * sizeof(mufftComplex),
                   pimpl->dev.stream);
 
   // split Image into blocks with overlap
@@ -404,8 +406,8 @@ void SearchNoNorm::SplitImage() {
   // do normalize to all subIMGs
   if (phase_flip == 1) {
     // Inplace FFT
-    cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(),
-                 CUFFT_FORWARD);
+    mufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(),
+                 MUFFT_FORWARD);
     // Scale IMG to normal size
     scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
         pimpl->dev.padded_image.get(), block_x * block_y * padded_template_size, l * l);
@@ -415,16 +417,16 @@ void SearchNoNorm::SplitImage() {
                              pimpl->dev.stream>>>(pimpl->dev.padded_image.get(),
                                                   pimpl->dev.reduction_buf.get(), l, l);
 
-    cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+    musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                     4 * padded_template_size * batch_size / BLOCK_SIZE * sizeof(float),
-                    cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                    musaMemcpyDeviceToHost, pimpl->dev.stream);
 
     int nimg = block_x * block_y;
     // After Reduction -> compute mean for each image
     float infile_mean[nimg], counts[nimg];
     std::memset(infile_mean, 0, sizeof(float) * nimg);
     std::memset(counts, 0, sizeof(float) * nimg);
-    cudaStreamSynchronize(pimpl->dev.stream);
+    musaStreamSynchronize(pimpl->dev.stream);
     for (int k = 0; k < nblocks; k++) {
       int id = k / ((l * l) / BLOCK_SIZE);
       infile_mean[id] += pimpl->host.reduction_buf[2 * k];
@@ -435,18 +437,18 @@ void SearchNoNorm::SplitImage() {
     }
 
     // Do Normalization with computed infile_mean[]
-    cudaMemcpyAsync(pimpl->dev.means.get(), infile_mean, sizeof(float) * nimg,
-                    cudaMemcpyHostToDevice, pimpl->dev.stream);
+    musaMemcpyAsync(pimpl->dev.means.get(), infile_mean, sizeof(float) * nimg,
+                    musaMemcpyHostToDevice, pimpl->dev.stream);
     // Contain ap2ri
     normalize<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), l, l,
                                                              pimpl->dev.means.get());
 
     // Inplace IFT
-    cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(),
-                 CUFFT_INVERSE);
+    mufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(),
+                 MUFFT_INVERSE);
   }
 
-  cudaStreamSynchronize(pimpl->dev.stream);
+  musaStreamSynchronize(pimpl->dev.stream);
 }
 
 void SearchNoNorm::PickParticles(std::vector<float>& scores, float euler3) {
@@ -458,8 +460,8 @@ void SearchNoNorm::PickParticles(std::vector<float>& scores, float euler3) {
       pimpl->dev.padded_image.get(), pimpl->dev.padded_rotated_image.get(), euler3, padding_size);
 
   // Inplace FFT
-  cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_rotated_image.get(),
-               pimpl->dev.padded_rotated_image.get(), CUFFT_FORWARD);
+  mufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_rotated_image.get(),
+               pimpl->dev.padded_rotated_image.get(), MUFFT_FORWARD);
 
   // Scale IMG to normal size
   scale<<<blockIMG_num, BLOCK_SIZE, 0, pimpl->dev.stream>>>(
@@ -475,15 +477,15 @@ void SearchNoNorm::PickParticles(std::vector<float>& scores, float euler3) {
           pimpl->dev.CCG.get(), pimpl->dev.padded_templates.get(),
           pimpl->dev.padded_rotated_image.get(), l, i + j * block_x);
       // Inplace IFT
-      cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(),
-                   CUFFT_INVERSE);
+      mufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(),
+                   MUFFT_INVERSE);
       // find peak(position) and get sum of data,data^2
       get_peak_and_SUM<<<blockGPU_num, BLOCK_SIZE, 4 * BLOCK_SIZE * sizeof(float),
                          pimpl->dev.stream>>>(pimpl->dev.CCG.get(), pimpl->dev.reduction_buf.get(),
                                               l, para.d_m);
-      cudaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
+      musaMemcpyAsync(pimpl->host.reduction_buf.get(), pimpl->dev.reduction_buf.get(),
                       4 * sizeof(float) * padded_template_size * batch_size / BLOCK_SIZE,
-                      cudaMemcpyDeviceToHost, pimpl->dev.stream);
+                      musaMemcpyDeviceToHost, pimpl->dev.stream);
 
       std::memset(pimpl->host.ubuf.get(), 0, 4 * sizeof(float) * batch_size);
       // peak, sum of data[i], sum of data[i]^2
@@ -492,7 +494,7 @@ void SearchNoNorm::PickParticles(std::vector<float>& scores, float euler3) {
       float* sums = pimpl->host.ubuf.get() + 2 * batch_size;
       float* sum2s = pimpl->host.ubuf.get() + 3 * batch_size;
 
-      cudaStreamSynchronize(pimpl->dev.stream);
+      musaStreamSynchronize(pimpl->dev.stream);
 
       // After Reduction -> compute mean for each image
       for (int k = 0; k < (padded_template_size * batch_size) / BLOCK_SIZE; k++) {

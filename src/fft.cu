@@ -1,7 +1,7 @@
 #include "fft.cuh"
 
-cufftHandle MakeFFTPlan(int dim0, int dim1, int batch_size) {
-  cufftHandle plan{};
+mufftHandle MakeFFTPlan(int dim0, int dim1, int batch_size) {
+  mufftHandle plan{};
 
   constexpr int rank = 2;      // 维数
   int n[rank] = {dim0, dim1};  // n*m
@@ -14,8 +14,7 @@ cufftHandle MakeFFTPlan(int dim0, int dim1, int batch_size) {
   int batch = batch_size;  // 批量处理的批数
 
   // FFT handler for all templates
-  cufftPlanMany(&plan, rank, n, inembed, istride, idist, onembed, ostride, odist, CUFFT_C2C,
-                batch);  // 针对多信号同时进行FFT
+  mufftPlanMany(&plan, rank, n, inembed, istride, idist, onembed, ostride, odist, MUFFT_C2C, batch);  // 针对多信号同时进行FFT
 
   return plan;
 };

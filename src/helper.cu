@@ -1,13 +1,13 @@
 #include <cstdio>
 #include <fstream>
 
-#include <cuda_runtime.h>
+#include <musa_runtime.h>
 
 #include "helper.cuh"
 
 int GetDeviceCount() {
   int devcount{};
-  cudaGetDeviceCount(&devcount);
+  musaGetDeviceCount(&devcount);
   
   return devcount;
 }
@@ -15,7 +15,7 @@ int GetDeviceCount() {
 void DeviceMemoryUsage() {
   size_t free{};
   size_t total{};
-  cudaMemGetInfo(&free, &total);
+  musaMemGetInfo(&free, &total);
   std::printf("Device total: %zu MB, free: %zu MB, usage: %zu MB\n", total >> 20, free >> 20,
               (total - free) >> 20);
 }
