@@ -1,64 +1,39 @@
-# GisSPA_v2.0
-In this version, the primary improvement is the correction of the GPU memory leak issue！
+# isSPA_1.1.2
+In this version, several scripts are added to do the preprocess and postprocess.
 
+## Update
 
-
-
-
-******Improvements******
-
-  1.We previously observed that GisSPA might produce inconsistent results on different servers with varying GPU cards and CUDA versions. This issue has now been resolved.
+1. We previously observed that isSPA might produce inconsistent results on different machines with varying GPU cards and CUDA versions. This issue has now been partially resolved.
   
-  Experimental tests show that this version identifies more correct particles and achieves higher resolution under the same data processing methods (including Class3D, Refine3D, Postprocess, and other subsequent processing).
+Experimental tests show that this version identifies more correct particles and achieves higher resolution under the same data processing methods (including Class3D, Refine3D, Postprocess, and other subsequent processing).
 
-  2.In this version, when ‘norm_type=1’ is in the config, the computation is performed on the entire image. Experimental tests indicate that the results with ‘norm_type=1’ are better than those with ‘norm_type=0’, with more particles identified.
-  
-  When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720x720) sections for computation, and the normalization algorithm is not applied. This setting is suitable for servers with less powerful GPUs, as processing large images can be demanding on the GPU, and omitting normalization can speed up the computation.
+2. In this version, when ‘norm_type=1’ is in the config, the computation is performed on the entire image. Experimental tests indicate that the results with ‘norm_type=1’ are better than those with ‘norm_type=0’, with more particles identified.
+When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720x720) sections for computation, and the normalization algorithm is not applied. This setting is suitable for machines with less powerful GPUs, as processing large images can be demanding on the GPU, and omitting normalization can speed up the computation.
 
-
-
-
-
-******Installation******
-  1.The installation method for GisSPA_v2.0 is the same as the original GisSPA version, but pay attention to the paths in the Makefile.
-  
-  Correct example:
-![image](https://github.com/user-attachments/assets/4b328a62-9a84-4eec-91c3-333274e3beb1)
-
-
-  Note when modifying the path: The first slash in the path is mandatory; it should be followed by the relative path to the HDF5 package from the current directory.
-  
-  Input “Make” and Press Enter to compile.
-  
-  After successful compilation, the main executable file will appear in the “build” directory.
-
-  2.Please refer to the bellow websites for installing the HDF5 package and the code compilation method:
-https://github.com/Autumn1998/GisSPA
-
-  3.When using GisSPA, you should follow it with a config file and then press Enter. It is normal to see the following warning after pressing Enter when calling the main program:
-  ![image](https://github.com/user-attachments/assets/469aa5cb-4b8f-4bc7-ad1a-705ab42c4a22)
+## Installation
+1.	Download HDF5 package from the official website:
+https://support.hdfgroup.org/downloads/index.html 
+2.	Uncompress it, such as 
+tar -xzf hdf5-1.14.5.tar.gz
+3.	Install HDF5 according to ‘./hdf5-1.14.5/release_docs/INSTALL_Autotools.txt’.
+4.	Enter isSPA_1.1.2, and modify LIB_HDF5 and INCLUDE_HDF5 in the Makefile according to the installation paths in step 3.
+5.	Execute the following commands:
+a)	make -j N (N is the number of available threads)
+b)	make install
+6.	(Recommended) Add the absolute paths of ‘./isSPA_1.1.2/build’ and ‘./isSPA_1.1.2/scripts’ to environment variables. For example,
+export PATH=/home/user/Software/isSPA_1.1.2/build:$PATH
+export PATH=/home/user/Software/isSPA_1.1.2/scripts:$PATH
+7.	(Recommended) Add the absolute path of the library of HDF5 to LD_LIBRARY_PATH. For instance,
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 
 
+## Answers to some frequently asked questions
+1. Which version should be used to generate projection files?
+You can use EMAN1 or EMAN2 now.
+2. What version of Python should I use?
+Python 3.
+3. How does GisSPA use multiple GPUs?
+You can split the entire dataset into multiple parts using the 'first' and 'last' parameters in the config file. Each part can then be processed on a separate GPU.
 
-
-
-
-******Answers to some frequently asked questions******
-  1.Which version should be used to generate HDF projection files?
-  
-  Use the project3d function from EMAN1. It is preferable not to use EMAN2.
-
-  2.What version was all the Python code written in?
-  
-  The code was written in Python 2.7. Additionally, all of our Python code that involves STAR files is designed for RELION 3.08 STAR files. If you wish to use RELION 3.1 or RELION 4, you will need to handle the conversion between different versions of RELION STAR files yourself.
-
-  3.How does GisSPA use multiple GPUs?
-  
-  You can split the entire dataset into multiple parts using the 'first' and 'last' parameters in the config file. Each part can then be processed on a separate GPU.
-
-
-
-
-
-******Contributor******
-Li Rui & Chen Yuanbo & Zhao Mingjie
+## Contributor
+Li Rui, Chen Yuanbo, Zhao Mingjie, Cheng Yuanhao
