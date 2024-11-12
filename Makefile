@@ -3,8 +3,8 @@ SHELL=/usr/bin/bash
 WD := $(shell pwd)
 TARGET_EXEC := main
 
-LIB_HDF5 := $(WD)/../HDF5/lib
-INCLUDE_HDF5 := $(WD)/../HDF5/include
+LIB_HDF5 := $(WD)/../hdf5/lib
+INCLUDE_HDF5 := $(WD)/../hdf5/include
 
 LDFLAGS := -lcufft -L$(LIB_HDF5) -lhdf5 -lgomp
 CXXFLAGS := -std=c++17 -O3 -Xcompiler -fopenmp -I$(INCLUDE_HDF5) -Iinclude -Iinclude/EMReader -Iinclude/utils
@@ -46,7 +46,7 @@ project3d: $(OBJS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OBJS) $(PROJECT3D) -o project3d $(LDFLAGS)
 
 install: $(BUILD_DIR)/$(TARGET_EXEC)
-	cp $(BUILD_DIR)/$(TARGET_EXEC) $(WD)/
+	ln -s $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/GisSPA
 
 test: install
 	$(WD)/test.sh
