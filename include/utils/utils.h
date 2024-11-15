@@ -22,17 +22,17 @@ bool is_little_endian();
   dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); \
   std::cout << dt_ms.count() << " ms" << std::endl
 #define CHECK()                                                                                   \
-  if ((musaPeekAtLastError()) != musaSuccess) {                                                   \
-    std::printf("\"%s\" at %s:%d\n", musaGetErrorString(musaGetLastError()), __FILE__, __LINE__); \
+  if ((cudaPeekAtLastError()) != cudaSuccess) {                                                   \
+    std::printf("\"%s\" at %s:%d\n", cudaGetErrorString(cudaGetLastError()), __FILE__, __LINE__); \
     std::exit(-1);                                                                                \
   }
 #define CALL(F)                                                                                \
-  if ((F) != musaSuccess) {                                                                    \
-    printf("Error %s at %s:%d\n", musaGetErrorString(musaGetLastError()), __FILE__, __LINE__); \
+  if ((F) != cudaSuccess) {                                                                    \
+    printf("Error %s at %s:%d\n", cudaGetErrorString(cudaGetLastError()), __FILE__, __LINE__); \
     exit(-1);                                                                                  \
   }
 #define FFTCALL(F)                                           \
-  if ((F) != MUFFT_SUCCESS) {                                \
+  if ((F) != CUFFT_SUCCESS) {                                \
     printf("Error id:%d at %s:%d\n", F, __FILE__, __LINE__); \
     exit(-1);                                                \
   }
