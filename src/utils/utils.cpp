@@ -34,6 +34,7 @@ bool is_little_endian() {  // check if this machine is little endian
     return false;
 }
 
-bool is_big_endian() {  // check if this machine is big endian
-  return !is_little_endian();
+bool is_big_endian() 
+{  // check if this machine is big endian
+    return !is_little_endian();
 }
