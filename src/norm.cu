@@ -339,7 +339,7 @@ void SearchNorm::PreprocessTemplate()
     normalize<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_templates.get(), padding_size, padding_size, pimpl->dev.means.get());
     cudaMemsetAsync(pimpl->dev.means.get(), 0, batch_size * sizeof(float), pimpl->dev.stream);
     // 傅里叶逆变换
-    cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(), pimpl->dev.padded_templates.get(), MUFFT_INVERSE);
+    cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.padded_templates.get(), pimpl->dev.padded_templates.get(), CUFFT_INVERSE);
 
     cudaStreamSynchronize(pimpl->dev.stream);
 }
@@ -352,7 +352,7 @@ void SearchNorm::PreprocessImage(const Image & img)
 
     float2Complex<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), pimpl->dev.image.get(), nx, ny);
     // fft inplace
-    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), MUFFT_FORWARD);
+    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), CUFFT_FORWARD);
     scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), nx * ny, nx * ny);
 
     // phase flipping
@@ -374,7 +374,7 @@ void SearchNorm::PreprocessImage(const Image & img)
     set_0Hz_to_0_at_RI<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), nx, ny);
 
     // ifft inplace
-    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), MUFFT_INVERSE);
+    cufftExecC2C(pimpl->dev.fft.raw_image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), CUFFT_INVERSE);
     Complex2float<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.image.get(), pimpl->dev.padded_image.get(), nx, ny);
 
     cudaStreamSynchronize(pimpl->dev.stream);
@@ -405,7 +405,7 @@ void SearchNorm::SplitImage()
 
     // do normalize to all subIMGs
     // Inplace FFT
-    cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), MUFFT_FORWARD);
+    cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image.get(), pimpl->dev.padded_image.get(), CUFFT_FORWARD);
     // Scale IMG to normal size
     scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), ix * iy * padded_template_size, l * l);
     ri2ap<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.padded_image.get(), ix * iy * padded_template_size);
@@ -437,7 +437,7 @@ void SearchNorm::SplitImage()
 
     // Inplace IFT
     // cufftExecC2C(pimpl->dev.fft.image, pimpl->dev.padded_image, pimpl->dev.padded_image,
-    // MUFFT_INVERSE);
+    // CUFFT_INVERSE);
 
     cudaMemsetAsync(pimpl->dev.CCG_sum.get(), 0, sizeof(cufftComplex) * padded_template_size * block_x * block_y, pimpl->dev.stream);
 
@@ -475,7 +475,7 @@ void SearchNorm::RotateTemplate(float euler3)
     substract_by_mean<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG_buf.get(), l, l, pimpl->dev.means.get());
     cudaMemcpyAsync(pimpl->dev.means.get(), infile_sqr, sizeof(float) * batch_size, cudaMemcpyHostToDevice, pimpl->dev.stream);
     divided_by_var<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG_buf.get(), padding_size, padding_size, pimpl->dev.means.get());
-    cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG_buf.get(), pimpl->dev.CCG_buf.get(), MUFFT_FORWARD);
+    cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG_buf.get(), pimpl->dev.CCG_buf.get(), CUFFT_FORWARD);
     scale<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG_buf.get(), padded_template_size * batch_size, padded_template_size);
     cudaStreamSynchronize(pimpl->dev.stream);
 }
@@ -494,7 +494,7 @@ void SearchNorm::ComputeCCGSum()
             // compute CCG
             compute_corner_CCG<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG.get(), pimpl->dev.CCG_buf.get(), pimpl->dev.padded_image.get(), l, block_id);
             // Inplace IFT
-            cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(), MUFFT_INVERSE);
+            cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(), CUFFT_INVERSE);
             // compute avg/variance
             add_CCG_to_sum<<<padded_template_size / BLOCK_SIZE, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG_sum.get(), pimpl->dev.CCG.get(), l, batch_size, block_id);
         }
@@ -525,7 +525,7 @@ void SearchNorm::PickParticles(std::vector<float>& scores, float euler3)
             // compute CCG
             compute_corner_CCG<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG.get(), pimpl->dev.CCG_buf.get(), pimpl->dev.padded_image.get(), l, i + j * block_x);
             // Inplace IFT
-            cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(), MUFFT_INVERSE);
+            cufftExecC2C(pimpl->dev.fft.templates, pimpl->dev.CCG.get(), pimpl->dev.CCG.get(), CUFFT_INVERSE);
             // update CCG with avg/var
             update_CCG<<<nblocks, BLOCK_SIZE, 0, pimpl->dev.stream>>>(pimpl->dev.CCG_sum.get(), pimpl->dev.CCG.get(), l, i + j * block_x);
 
