@@ -18,9 +18,13 @@ When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720
 tar -xzf hdf5-1.14.5.tar.gz
 ```
 4.	Install HDF5 according to **./hdf5-1.14.5/release_docs/INSTALL_Autotools.txt**.
-5.	Enter isSPA_1.1.2, and modify **LIB_HDF5** and **INCLUDE_HDF5** in the **Makefile** according to the installation paths in step 3.
-6.	Edit the first line of **Makefile**, making sure the path of SHELL is correct in your system.
-7.	Execute the following commands:
+5.	(Recommended) Add the absolute path of the library of HDF5 to **LD_LIBRARY_PATH**. For instance,
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
+```
+6.	Enter the directory of isSPA_1.1.2, and modify **LIB_HDF5** and **INCLUDE_HDF5** in the **Makefile** according to the installation paths in step 3.
+7.	Edit the first line of **Makefile**, making sure the path of SHELL is correct in your system.
+8.	Execute the following commands:
 ```
 make -j N (N is the number of available threads)
 make install
@@ -29,10 +33,6 @@ make install
 ```
 export PATH=/home/user/Software/isSPA_1.1.2/build:$PATH
 export PATH=/home/user/Software/isSPA_1.1.2/isSPA_scripts:$PATH
-```
-10.	(Recommended) Add the absolute path of the library of HDF5 to **LD_LIBRARY_PATH**. For instance,
-```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 ```
 
 ## Answers to some frequently asked questions
