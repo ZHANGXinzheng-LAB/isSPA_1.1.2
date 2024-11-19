@@ -8,7 +8,7 @@ In this version, several scripts are added to do the preprocess and postprocess.
   Experimental tests show that this version identifies more correct particles and achieves higher resolution under the same data processing methods (including Class3D, Refine3D, Postprocess, and other subsequent processing).
 
 2. In this version, when **norm_type=1** is in the config, the computation is performed on the entire image. Experimental tests indicate that the results with **norm_type=1** are better than those with **norm_type=0**, with more particles identified.
-When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720x720) sections for computation, and the normalization algorithm is not applied. This setting is suitable for machines with less powerful GPUs, as processing large images can be demanding on the GPU, and omitting normalization can speed up the computation.
+When **norm_type=0** is used, the large image is divided into smaller (e.g.720x720) sections for computation, and the normalization algorithm is not applied. This setting is suitable for machines with less powerful GPUs, as processing large images can be demanding on the GPU, and omitting normalization can speed up the computation.
 
 ## Installation
 1.	Download HDF5 package from the official website:
@@ -18,7 +18,7 @@ When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720
 tar -xzf hdf5-1.14.5.tar.gz
 ```
 4.	Install HDF5 according to **./hdf5-1.14.5/release_docs/INSTALL_Autotools.txt**.
-5.	(Recommended) Add the absolute path of the library of HDF5 to **LD_LIBRARY_PATH**. For instance,
+5.	(Recommended) Add the absolute path of the library of HDF5 to *LD_LIBRARY_PATH*. For instance,
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 ```
@@ -39,9 +39,9 @@ export PATH=/home/user/Software/isSPA_1.1.2/isSPA_scripts:$PATH
 1. Which version should be used to generate projection files?
 You can use EMAN1 or EMAN2 now.
 2. What version of Python should I use?
-Python 3.
-3. How does GisSPA use multiple GPUs?
-You can split the entire dataset into multiple parts using the 'first' and 'last' parameters in the config file. Each part can then be processed on a separate GPU.
+**Python 3**.
+3. How does isSPA use multiple GPUs?
+You can split the entire dataset into multiple parts using the **first** and **last** parameters in the config file. Each part can then be processed on a separate GPU.
 
 ## Contributor
 Li Rui, Chen Yuanbo, Zhao Mingjie, Cheng Yuanhao
