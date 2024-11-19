@@ -8,8 +8,7 @@
 
 __global__ void UpdateSigma(cufftComplex* d_templates, float* d_buf);
 __global__ void generate_mask(int l, cufftComplex* mask, float r, float* d_buf, float up, float low);
-__global__ void multiCount_dot(int l, cufftComplex* mask, cufftComplex* d_templates, float* constants,
-                               float* res);
+__global__ void multiCount_dot(int l, cufftComplex* mask, cufftComplex* d_templates, float* constants, float* res);
 __global__ void scale_each(int l, cufftComplex* d_templates, float* ems, double* d_sigmas);
 __global__ void SQRSum_by_circle(cufftComplex* data, float* ra, float* rb, int nx, int ny, int mode = 0);
 __global__ void whiten_Tmp(cufftComplex* data, float* ra, float* rb, int l);
@@ -40,5 +39,4 @@ __global__ void ap2ri(cufftComplex* data);
 __global__ void Complex2float(float* f, cufftComplex* c, int nx, int ny);
 __global__ void float2Complex(cufftComplex* c, float* f, int nx, int ny);
 __global__ void do_phase_flip(cufftComplex* filter, Parameters para, int nx, int ny);
-__device__ float CTF_AST(int x1, int y1, int nx, int ny, float apix, float dfu, float dfv, float dfdiff, float dfang,
-                         float lambda, float cs, float ampconst, int mode);
+__device__ float CTF_AST(int x1, int y1, int nx, int ny, float apix, float dfu, float dfv, float dfdiff, float dfang, float lambda, float cs, float ampconst, int mode);
