@@ -1,7 +1,7 @@
 #include "constants.h"
 #include "kernels.cuh"
 
-__global__ void UpdateSigma(mufftComplex * d_templates, float * d_buf) 
+__global__ void UpdateSigma(cufftComplex * d_templates, float * d_buf) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -29,7 +29,7 @@ __global__ void UpdateSigma(mufftComplex * d_templates, float * d_buf)
     }
 }
 
-__global__ void generate_mask(int l, mufftComplex * mask, float r, float * res, float up, float low) 
+__global__ void generate_mask(int l, cufftComplex * mask, float r, float * res, float up, float low) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -63,7 +63,7 @@ __global__ void generate_mask(int l, mufftComplex * mask, float r, float * res, 
     if (tid == 0) res[blockIdx.x] = sdata[0];
 }
 
-__global__ void multiCount_dot(int l, mufftComplex * mask, mufftComplex * d_templates, float * constants, float * res) 
+__global__ void multiCount_dot(int l, cufftComplex * mask, cufftComplex * d_templates, float * constants, float * res) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -89,7 +89,7 @@ __global__ void multiCount_dot(int l, mufftComplex * mask, mufftComplex * d_temp
     if (tid == 0) res[blockIdx.x] = sdata[0];
 }
 
-__global__ void scale_each(int l, mufftComplex * d_templates, float * ems, double * d_sigmas) 
+__global__ void scale_each(int l, cufftComplex * d_templates, float * ems, double * d_sigmas) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -103,7 +103,7 @@ __global__ void scale_each(int l, mufftComplex * d_templates, float * ems, doubl
 
 // mode = 0 (default)  for template
 // mode = 1 for raw image
-__global__ void SQRSum_by_circle(mufftComplex * data, float * ra, float * rb, int nx, int ny, int mode) 
+__global__ void SQRSum_by_circle(cufftComplex * data, float * ra, float * rb, int nx, int ny, int mode) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -138,7 +138,7 @@ __global__ void SQRSum_by_circle(mufftComplex * data, float * ra, float * rb, in
     }
 }
 
-__global__ void whiten_Tmp(mufftComplex * data, float * ra, float * rb, int l) 
+__global__ void whiten_Tmp(cufftComplex * data, float * ra, float * rb, int l) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -162,7 +162,7 @@ __global__ void whiten_Tmp(mufftComplex * data, float * ra, float * rb, int l)
     data[i].y = tmp;
 }
 
-__global__ void whiten_filter_weight_Img(mufftComplex * data, float * ra, float * rb, int nx, int ny, Parameters para) 
+__global__ void whiten_filter_weight_Img(cufftComplex * data, float * ra, float * rb, int nx, int ny, Parameters para) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -218,7 +218,7 @@ __global__ void whiten_filter_weight_Img(mufftComplex * data, float * ra, float 
     data[i].y = tmp;
 }
 
-__global__ void set_0Hz_to_0_at_RI(mufftComplex* data, int nx, int ny) 
+__global__ void set_0Hz_to_0_at_RI(cufftComplex* data, int nx, int ny) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -240,7 +240,7 @@ __global__ void set_0Hz_to_0_at_RI(mufftComplex* data, int nx, int ny)
     data[i].y = tmp;
 }
 
-__global__ void apply_mask(mufftComplex * data, float d_m, float edge_half_width, int l) 
+__global__ void apply_mask(cufftComplex * data, float d_m, float edge_half_width, int l) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -262,7 +262,7 @@ __global__ void apply_mask(mufftComplex * data, float d_m, float edge_half_width
     }
 }
 
-__global__ void apply_weighting_function(mufftComplex * data, size_t padding_size, Parameters para) 
+__global__ void apply_weighting_function(cufftComplex * data, size_t padding_size, Parameters para) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -338,7 +338,7 @@ __device__ float CTF_AST(int x1, int y1, int nx, int ny, float apix, float dfu, 
     return v;
 }
 
-__global__ void compute_area_sum_ofSQR(mufftComplex * data, float * res, int nx, int ny) 
+__global__ void compute_area_sum_ofSQR(cufftComplex * data, float * res, int nx, int ny) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -411,7 +411,7 @@ __global__ void compute_area_sum_ofSQR(mufftComplex * data, float * res, int nx,
     }
 }
 
-__global__ void compute_sum_sqr(mufftComplex * data, float * res, int nx, int ny) 
+__global__ void compute_sum_sqr(cufftComplex * data, float * res, int nx, int ny) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -477,7 +477,7 @@ __global__ void compute_sum_sqr(mufftComplex * data, float * res, int nx, int ny
     }
 }
 
-__global__ void normalize(mufftComplex * data, int nx, int ny, float * means) 
+__global__ void normalize(cufftComplex * data, int nx, int ny, float * means) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -493,7 +493,7 @@ __global__ void normalize(mufftComplex * data, int nx, int ny, float * means)
     data[i].y = tmp;
 }
 
-__global__ void divided_by_var(mufftComplex * data, int nx, int ny, float * var) 
+__global__ void divided_by_var(cufftComplex * data, int nx, int ny, float * var) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -504,7 +504,7 @@ __global__ void divided_by_var(mufftComplex * data, int nx, int ny, float * var)
     if (var[template_id] != 0) data[i].x = data[i].x / sqrtf(var[template_id]);
 }
 
-__global__ void substract_by_mean(mufftComplex * data, int nx, int ny, float * means) 
+__global__ void substract_by_mean(cufftComplex * data, int nx, int ny, float * means) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -571,7 +571,7 @@ __global__ void rotate_IMG(float * d_image, float * d_rotated_image, float e, in
   d_rotated_image[id] = res;
 }
 
-__global__ void rotate_subIMG(mufftComplex * d_image, mufftComplex * d_rotated_image, float e, int l) 
+__global__ void rotate_subIMG(cufftComplex * d_image, cufftComplex * d_rotated_image, float e, int l) 
 {
     auto id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -648,7 +648,7 @@ __global__ void rotate_subIMG(mufftComplex * d_image, mufftComplex * d_rotated_i
     d_rotated_image[id].y = res_y;
 }
 
-__global__ void split_IMG(float * Ori, mufftComplex * IMG, int nx, int ny, int l, int bx, int overlap) 
+__global__ void split_IMG(float * Ori, cufftComplex * IMG, int nx, int ny, int l, int bx, int overlap) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -669,7 +669,7 @@ __global__ void split_IMG(float * Ori, mufftComplex * IMG, int nx, int ny, int l
     IMG[i].x = Ori[ori_x + ori_y * nx];
 }
 
-__global__ void split_IMG(float * Ori, mufftComplex * IMG, int * block_off_x, int * block_off_y, int nx, int ny, int l, int bx, int overlap) 
+__global__ void split_IMG(float * Ori, cufftComplex * IMG, int * block_off_x, int * block_off_y, int nx, int ny, int l, int bx, int overlap) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -688,7 +688,7 @@ __global__ void split_IMG(float * Ori, mufftComplex * IMG, int * block_off_x, in
     IMG[i].x = Ori[ori_x + ori_y * nx]; // 将搜索区域从原照片中截出来
 }
 
-__global__ void compute_corner_CCG(mufftComplex * CCG, mufftComplex * Tl, mufftComplex * IMG, int l, int block_id) 
+__global__ void compute_corner_CCG(cufftComplex * CCG, cufftComplex * Tl, cufftComplex * IMG, int l, int block_id) 
 {
     // On this function, block means subimage splitted from IMG, not block ON GPU
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -725,7 +725,7 @@ __global__ void compute_corner_CCG(mufftComplex * CCG, mufftComplex * Tl, mufftC
 }
 
 // compute the avg of CCG in all templates
-__global__ void add_CCG_to_sum(mufftComplex * CCG_sum, mufftComplex * CCG, int l, int N_tmp, int block_id) 
+__global__ void add_CCG_to_sum(cufftComplex * CCG_sum, cufftComplex * CCG, int l, int N_tmp, int block_id) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -742,7 +742,7 @@ __global__ void add_CCG_to_sum(mufftComplex * CCG_sum, mufftComplex * CCG, int l
     }
 }
 
-__global__ void set_CCG_mean(mufftComplex * CCG_sum, int l, int N_tmp, int N_euler) 
+__global__ void set_CCG_mean(cufftComplex * CCG_sum, int l, int N_tmp, int N_euler) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     float total_n = N_tmp * N_euler;
@@ -755,7 +755,7 @@ __global__ void set_CCG_mean(mufftComplex * CCG_sum, int l, int N_tmp, int N_eul
 }
 
 // update CCG val use avgeage & variance
-__global__ void update_CCG(mufftComplex * CCG_sum, mufftComplex * CCG, int l, int block_id) 
+__global__ void update_CCG(cufftComplex * CCG_sum, cufftComplex * CCG, int l, int block_id) 
 {
     // On this function,block means subimage splitted from IMG, not block ON GPU
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -772,7 +772,7 @@ __global__ void update_CCG(mufftComplex * CCG_sum, mufftComplex * CCG, int l, in
 
 //"MAX" reduction for *odata : return max{odata[i]},i
 //"SUM" reduction for *odata : return sum{odata[i]},sum{odata[i]^2}
-__global__ void get_peak_and_SUM(mufftComplex* odata, float* res, int l, float d_m) {
+__global__ void get_peak_and_SUM(cufftComplex* odata, float* res, int l, float d_m) {
   extern __shared__ float sdata[];
   // each thread loads one element from global to shared mem
   auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -813,7 +813,7 @@ __global__ void get_peak_and_SUM(mufftComplex* odata, float* res, int l, float d
 }
 
 //"MAX" reduction for *odata : return max{odata[i]},i
-__global__ void get_peak_pos(mufftComplex* odata, float* res, int l) 
+__global__ void get_peak_pos(cufftComplex* odata, float* res, int l) 
 {
     extern __shared__ float sdata[];
     // each thread loads one element from global to shared mem
@@ -848,7 +848,7 @@ __global__ void get_peak_pos(mufftComplex* odata, float* res, int l)
 }
 
 // CUFFT will enlarge VALUE to N times. Restore it
-__global__ void scale(mufftComplex * data, size_t size, int l2) 
+__global__ void scale(cufftComplex * data, size_t size, int l2) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= size) return;
@@ -857,7 +857,7 @@ __global__ void scale(mufftComplex * data, size_t size, int l2)
     data[i].y /= l2;
 }
 
-__global__ void clear_image(mufftComplex* data) {
+__global__ void clear_image(cufftComplex* data) {
   long long i = blockIdx.x * blockDim.x + threadIdx.x;
   data[i].x = 0;
   data[i].y = 0;
@@ -868,13 +868,13 @@ __global__ void clear_float(float* data) {
   data[i] = 0;
 }
 
-__global__ void Complex2float(float* f, mufftComplex* c, int nx, int ny) {
+__global__ void Complex2float(float* f, cufftComplex* c, int nx, int ny) {
   long long i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= nx * ny) return;
   f[i] = c[i].x;
 }
 
-__global__ void float2Complex(mufftComplex * c, float * f, int nx, int ny) 
+__global__ void float2Complex(cufftComplex * c, float * f, int nx, int ny) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= nx * ny) return;
@@ -882,7 +882,7 @@ __global__ void float2Complex(mufftComplex * c, float * f, int nx, int ny)
     c[i].y = 0;
 }
 
-__global__ void do_phase_flip(mufftComplex * filter, Parameters para, int nx, int ny) 
+__global__ void do_phase_flip(cufftComplex * filter, Parameters para, int nx, int ny) 
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= nx * ny) return;
@@ -895,7 +895,7 @@ __global__ void do_phase_flip(mufftComplex * filter, Parameters para, int nx, in
     filter[i].y *= v;
 }
 
-__global__ void ap2ri(mufftComplex* data) 
+__global__ void ap2ri(cufftComplex* data) 
 {
   // i <==> global ID
   auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -906,7 +906,7 @@ __global__ void ap2ri(mufftComplex* data)
   data[i].y = tmp;
 }
 
-__global__ void ri2ap(mufftComplex * data, size_t size) 
+__global__ void ri2ap(cufftComplex * data, size_t size) 
 {
     // i <==> global ID
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
