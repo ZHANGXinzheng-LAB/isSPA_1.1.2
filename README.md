@@ -23,7 +23,7 @@ tar -xzf hdf5-1.14.5.tar.gz
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 ```
 6.	Enter the directory of isSPA_1.1.2, and modify **LIB_HDF5** and **INCLUDE_HDF5** in the **Makefile** according to the installation paths in step 3.
-7.	Edit the first line of **Makefile**, making sure the path of SHELL is correct in your system.
+7.	Edit the first line of **Makefile**, making sure *the path of SHELL* is correct in your system.
 8.	Execute the following commands:
 ```
 make -j N (N is the number of available threads)
