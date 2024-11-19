@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 make -j N (N is the number of available threads)
 make install
 ```
-8.	(Recommended) Add the absolute paths of **./isSPA_1.1.2/build** and **./isSPA_1.1.2/isSPA_scripts** to environment variables. For example,
+9.  (Recommended) Add the absolute paths of **./isSPA_1.1.2/build** and **./isSPA_1.1.2/isSPA_scripts** to environment variables. For example,
 ```
 export PATH=/home/user/Software/isSPA_1.1.2/build:$PATH
 export PATH=/home/user/Software/isSPA_1.1.2/isSPA_scripts:$PATH
