@@ -206,7 +206,7 @@ int emdata::readImage(const char * filespec, int n, int nodata)
     FILE * in = std::fopen(filespec, "r");
     if (in == nullptr) 
     {
-        std::printf("File containing templates does NOT exist \"%s\"\n", filespec);
+        std::printf("\nFile containing templates does NOT exist: \"%s\"\n", filespec);
         std::exit(-1);
     }
     std::fclose(in);
