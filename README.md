@@ -14,9 +14,9 @@ When ‘norm_type=0’ is used, the large image is divided into smaller (e.g.720
 1.	Download HDF5 package from the official website:
   https://support.hdfgroup.org/downloads/index.html 
 2.	Uncompress it, such as
-` 
+```
 tar -xzf hdf5-1.14.5.tar.gz
-`
+```
 4.	Install HDF5 according to ‘./hdf5-1.14.5/release_docs/INSTALL_Autotools.txt’.
 5.	Enter isSPA_1.1.2, and modify **LIB_HDF5** and **INCLUDE_HDF5** in the Makefile according to the installation paths in step 3.
 6.	Edit the first line of Makefile, making sure the path of SHELL is correct in your system.
