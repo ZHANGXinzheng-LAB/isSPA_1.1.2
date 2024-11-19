@@ -24,9 +24,9 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/user/Software/hdf5/lib
 ```
 6.	Enter the directory of isSPA_1.1.2, and modify **LIB_HDF5** and **INCLUDE_HDF5** in the **Makefile** according to the installation paths in step 3.
 7.	Edit the first line of **Makefile**, making sure *the path of SHELL* is correct in your system.
-8.	Execute the following commands:
+8.	Execute the following commands (N is the number of available threads):
 ```
-make -j N (N is the number of available threads)
+make -j N
 make install
 ```
 9.  (Recommended) Add the absolute paths of **./isSPA_1.1.2/build** and **./isSPA_1.1.2/isSPA_scripts** to environment variables. For example,
