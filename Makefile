@@ -1,4 +1,4 @@
-SHELL=/usr/bin/bash
+SHELL=/bin/bash
 
 WD := $(shell pwd)
 TARGET_EXEC := main
@@ -46,7 +46,7 @@ project3d: $(OBJS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OBJS) $(PROJECT3D) -o project3d $(LDFLAGS)
 
 install: $(BUILD_DIR)/$(TARGET_EXEC)
-	ln -s $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/GisSPA
+	ln $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/isSPA
 
 test: install
 	$(WD)/test.sh
