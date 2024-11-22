@@ -40,11 +40,15 @@ if bin_factor > 1:
     if os.path.exists(f'{input_dir}/bin{bin_factor}') == False:
         os.mkdir(f'{input_dir}/bin{bin_factor}')
     for j,i in enumerate(file_list):
-        subprocess.Popen(f'relion_image_handler --i {input_dir}/{i} --o {input_dir}/bin{bin_factor}/{i} --angpix {pixel} --rescale_angpix {pixel_b}', shell=True)
+        name = i.split('.')[0]
+        p = subprocess.Popen(f'relion_image_handler --i {input_dir}/{i} --o {input_dir}/bin{bin_factor}/{name}_bin{bin_factor}.mrc --angpix {pixel} --rescale_angpix {pixel_b} >> preprocess.log', shell=True)
         if j != 0:
-            if j % 128 == 0:
-                print(f'\n\n {j} tasks finished!\n\n')
-                time.sleep(5)
+            if j % 12 == 0:
+                p.wait()
+                print(f' {j} micrographs are binned!\n')
+        if j == len(file_list)-1:
+            p.wait()
+                #time.sleep(5)
 
 fnum = 0 # image number in new file
 
@@ -61,4 +65,4 @@ if len(star_format) == 3:
 else:
     write_lst(lines, star_format, lst, 1, spliter, fnum, bin_factor)
 
-print("\n\nPlease wait until all micrographs are binned!\n\n")
+print(" All tasks are finished!\n")

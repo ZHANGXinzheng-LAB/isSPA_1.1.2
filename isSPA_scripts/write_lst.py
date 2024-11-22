@@ -21,9 +21,13 @@ def write_lst(lines, star_format, lst, v, spliter, fnum, bin_factor):
         for i in lines[star_format[-2]:]:
             if i.strip():
                 new_line = " ".join(i.split(spliter))
-                filename = new_line.split()[filename_n]
+                micrograph_name = new_line.split()[filename_n]
+                file_name = micrograph_name.split('/')[-1]
+                if file_name in micrograph_name:
+                    file_path = micrograph_name.replace(file_name, '')
                 if bin_factor > 1:
-                    filename = filename.replace('/', f'/bin{bin_factor}/')
+                    file_path = file_path + f'bin{bin_factor}/'
+                    file_name = file_name.replace('.mrc', f'_bin{bin_factor}.mrc')
                 #print(new_line.split())
                 dfu = float(new_line.split()[dfu_n])/1e4
                 dfv = float(new_line.split()[dfv_n])/1e4
@@ -32,5 +36,5 @@ def write_lst(lines, star_format, lst, v, spliter, fnum, bin_factor):
                 dfdiff = math.fabs(dfu-dfv)/2 # dfu can be larger or smaller than dfv
                 if dfu > dfv:
                     dfang = math.fmod(dfang + 360 + 90, 360) # change the angle from the larger defocus to the smaller defocus
-                g.write(f'{fnum}\t{filename}\tdefocus=%.11f\tdfdiff=%.10f\tdfang=%.6f\n' % (defocus, dfdiff, dfang))
+                g.write(f'{fnum}\t{file_path}{file_name}\tdefocus=%.11f\tdfdiff=%.10f\tdfang=%.6f\n' % (defocus, dfdiff, dfang))
                 
